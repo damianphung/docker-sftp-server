@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Script to auto generate keys 
+
+KEYS_DIR=./keys
+SFTP_USER="user"
+CONTAINER_NAME="sftp"
+
+docker build -t mocksftp .
+docker run -d --name ${CONTAINER_NAME} -v /var/sftp-server:/data mocksftp
+
+ssh-keygen -b 4096 -f ${KEYS_DIR}/${SFTP_USER} -q -N ""
+
+docker cp ${KEYS_DIR}/${SFTP_USER}.pub ${CONTAINER_NAME}:/data/users/
+
+# Container needs up to 20 seconds to refresh user settings
+sleep 20
+
+echo "Container built!"
+echo "You can now SFTP to the container with: sftp -P 2022 -i $(readlink -f ${KEYS_DIR}/${SFTP_USER}) ${SFTP_USER}@$(docker inspect -f '{{ .NetworkSettings.IPAddress }}' ${CONTAINER_NAME})"
